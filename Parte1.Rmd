@@ -9,3 +9,177 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(faraway)
+library(ggplot2)
+library(dplyr)
+```
+
+
+# ASPECTOS INICIALES
+
+Tener en cuenta que la esencia de un análisis estadístico consiste en identificar de forma correcta un problema, seguido de una recopilación de datos apropiada, organización de datos, análisis de los mismos e informe final.
+
+Siempre se debe tener conocimiento de la forma en que se obtuvieron los datos ya que de ello dependen las conclusiones, por ejemplo, las conclusiones de un estudio con muestreo probabilístico son distintas a las que provienen de un muestreo por conveniencia. En fin... se debe revisar si los datos son experimentales, observacionales, etc.
+
+Otro aspecto importante son los datos faltantes, su codificación, unidades de medida, etc. Además revisar si tienen un patrón de error de entrada, por ejemplo, equipos descalibrados para toma de temperatura.
+
+# ANÁLISIS DE DATOS
+
+Es algo natural que se debe realizar en todo análisis estadístico, básicamente realizar una valoración descriptiva de los datos con medidas de tendencia central, medidas de dispersión, correlaciones, etc. La idea es acompañar con resúmenes gráficos. En qué enfocar el análisis visual de gráficos:
+
+- Valores atípicos.  
+- Posibles errores de entrada de datos.  
+- Distribuciones sesgadas o inusuales.  
+- Estructura de las distribuciones.  
+- Verificar con estudios previos.  
+
+
+## Ejemplo con data PIMA
+
+El Instituto Nacional de Diabetes y Enfermedades Digestivas y Renales realizó un estudio en 768 mujeres adultas de la tribu Pima que vivían cerca de Phoenix. Se registraron las siguientes variables: número de veces embarazada, concentración de glucosa en plasma a las 2 horas en una prueba de tolerancia oral a la glucosa, presión arterial diastólica (mmHg), grosor del pliegue cutáneo del tríceps (mm), insulina sérica a las 2 horas (mu U/ml), índice de masa corporal (peso en kg/(altura en m2)), función genealógica de la diabetes, edad (años) y una prueba para determinar si el paciente mostraba signos de diabetes (codificado como cero si era negativo, uno si era positivo). Los datos se pueden obtener del Repositorio UCI de bases de datos de aprendizaje automático en archive.ics.uci.edu/ml.
+
+Vamos a cargar los datos y revisar los 6 primeros registros para familiarizarnos con el data frame:
+
+```{r}
+data(pima,package = "faraway")
+head(pima)
+```
+
+Empezando el análisis conviene realizar un resumen numérico:
+
+```{r}
+summary(pima)
+```
+
+La idea en este punto es revisar valores inusuales o inesperados que provengan de un posible error de entrada de datos, por lo que se recomienda revisar los valores extremos. Por ejemplo:
+
+- La variable "pregnant" que corresponde al número de veces embarazada. Se ve que el mínimo es cero (algo esperado) y 17 que es inusual pero no imposible.
+- Existen otras variables con valores mínimos en cero, por ejemplo "diastolic" (presión diastólica), evidentemente tener un valor en cero significa estar muerto lo que es ilógico en el estudio.  
+
+Echémos un vistazo para revisar cuántos registros tiene valores en cero para la presión diastólica.
+
+```{r}
+# Se pueden usar las siguientes alternativas
+table(pima$diastolic)
+sum(pima$diastolic==0)
+summarise(pima,REGISTROS_CERO=sum(diastolic==0))
+```
+Existen 35 registros con la variable "diastolic" igual a cero. Es probable que la persona que estaba recopilando los datos no obtuviera el valor de esta variable para 35 personas y en su lugar registra un cero.
+
+Asumimos que estos valores en cero son en realidad faltantes, por lo que vamos a reemplazarlos por *"NA"*
+
+```{r}
+pima$glucose[pima$glucose==0]<-NA
+pima$diastolic[pima$diastolic==0]<-NA
+pima$triceps[pima$triceps==0]<-NA
+pima$insulin[pima$insulin==0]<-NA
+pima$bmi[pima$bmi]<-NA
+```
+
+Ahora realizamos un resumen para revisar los cambios:
+
+```{r}
+summary(pima)
+```
+
+Ahora bien, la variable "test" es categórica. Si es 0 quiere decir que no tiene principios de diabetes pero si es 1 si los tiene. Entonces transformamos esta variable en factor.
+
+```{r}
+#Verificamos el tipo de variable
+class(pima$test)
+```
+
+Es de tipo entero.
+
+```{r}
+pima$test<-factor(pima$test)
+# y verificamos
+summary(pima$test)
+```
+En total 500 mujeres no tienen principios de diabetes y las otras 268 sí los tienen. Ahora bien, es recomendable cambiar estos valores del factor por algo más explícito. Entonces a los valores cero los reemplazamos por "negativo" y los valores 1 por "positivo".
+
+```{r}
+#puedo hacerlo de forma individual (por nivel de factor)
+levels(pima$test)[levels(pima$test)=="0"]<-"negativo"
+levels(pima$test)[levels(pima$test)=="1"]<-"positivo"
+#puedo hacerlo todo de una vez así:
+#levels(pima$test)<-c("negativo","positivo")
+summary(pima$test)
+```
+
+Vamos a revisar gráficamente algunas variables. Empezamos por un histograma.
+
+```{r}
+hist(pima$diastolic,xlab = "Diastolic")
+```
+
+Tiene una distribución de campana centrada en 70, pero revisemos un grpafico de densidad.
+
+```{r}
+plot(density(pima$diastolic,na.rm=T))
+```
+
+Ahora miremos los datos ordenados.
+
+```{r}
+plot(sort(pima$diastolic),ylab="Sorted Diastolic")
+```
+
+En este gráfico vemos los casos de forma individual, su distribución y valores atípicos.
+
+Es importante revisar las 3 opciones ya que cada una puede complementar el análisis de los datos.
+
+También se pueden hacer análisis con gráficos bivariados, por ejemplo, vamos a realizar un gráfico de dispersión entre las variables "diabetes" y "diastolic" para encontrar algunos patrones.
+
+```{r}
+plot(diabetes~diastolic,pima)
+```
+
+Otro gráfico bivariado con boxplot puede mostrar el grado de diabetes de acuerdo con el test.
+
+```{r}
+plot(diabetes~test,pima)
+```
+
+El paquete ggplot tiene mejores visualizaciones
+
+```{r}
+ggplot(pima,aes(x=diastolic))+
+  geom_histogram()
+```
+
+```{r}
+ggplot(pima,aes(x=diastolic))+
+  geom_density()
+```
+
+```{r}
+ggplot(pima,aes(x=diastolic,y=diabetes))+
+  geom_point()
+```
+
+```{r}
+ggplot(pima,aes(x=test,y=diabetes))+geom_boxplot()
+```
+
+```{r}
+ggplot(pima,aes(x=diastolic,y=diabetes,shape=test))+
+  geom_point()+
+  theme(legend.position = "top", legend.direction = "horizontal")
+```
+
+
+```{r}
+ggplot(pima,aes(x=diastolic,y=diabetes)) + geom_point(size=1) +
+facet_grid(~ test)
+```
+
+
+
+
+
+
+
+
+
