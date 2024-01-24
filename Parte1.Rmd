@@ -175,6 +175,23 @@ ggplot(pima,aes(x=diastolic,y=diabetes)) + geom_point(size=1) +
 facet_grid(~ test)
 ```
 
+# CUÁNDO USAR UN MODELADO LINEAL
+
+Se usa para explicar o modelar la relación entre una variable *respuesta* "Y" y un conjunto de variables *predictoras*, *explicativas* o de *entrada*.
+
+- Si una o más variables predictoras o explicativas es *cualitativa* entonces es un análisis de covarianza (**ANCOVA**). En este modelo se utiliza para comparar grupos teniendo en cuenta las variaciones asociadas a las variables cuantitativas. Por ejemplo, se está analizando el número de votos entre hombres y mujeres.  
+
+- Si la variable respuesta es *cuantitativa* y las variables explicativas son *cualitativas* entonces se está ante una **ANOVA**  
+
+- Si la variable respuesta es *cualitativa* se podría estar ante una regresión logística.
+
+## OBJETIVOS DE LA REGRESIÓN
+
+- Predecir dado valores de predictores.  
+- Evaluar el efecto de los predictores o variables explicativas y la variable respuesta.  
+
+
+
 
 
 
